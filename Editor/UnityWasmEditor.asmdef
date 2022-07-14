@@ -1,0 +1,16 @@
+{
+    "name": "UnityWasmEditor",
+    "rootNamespace": "UnityWasm.Editor",
+    "references": [
+        "GUID:7faa839a710e565409361b9f0c62a4da"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

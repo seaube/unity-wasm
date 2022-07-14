@@ -1,0 +1,13 @@
+{
+  "name": "com.seaube.unity-wasm",
+  "version": "0.1.0",
+  "description": "Base package for integrating WebAssembly with your unity project",
+  "displayName": "Unity Wasm",
+  "unity": "2021.2",
+  "author": {
+    "name" : "Seaube"
+  },
+  "dependencies": {
+  },
+  "repository": "https://github.com/seaube/unity-wasm"
+}
