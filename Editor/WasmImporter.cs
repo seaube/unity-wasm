@@ -3,6 +3,7 @@ using UnityEditor.AssetImporters;
 using System.Reflection;
 using System.Linq;
 using System;
+using System.IO;
 
 #nullable enable
 
@@ -16,7 +17,8 @@ public class WasmImporter : ScriptedImporter {
 			iconAsset = Resources.Load<Texture2D>(iconPath);
 		}
 
-		var asset = ScriptableObject.CreateInstance(typeof(WasmAsset)) as WasmAsset;
+		var asset = ScriptableObject.CreateInstance<WasmAsset>();
+		asset.bytes = File.ReadAllBytes(ctx.assetPath);
 		ctx.AddObjectToAsset("WasmAsset", asset, iconAsset);
 		ctx.SetMainObject(asset);
 

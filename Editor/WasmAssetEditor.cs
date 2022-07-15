@@ -6,7 +6,66 @@ using System.Diagnostics;
 #nullable enable
 
 [System.Serializable]
-class WasmInfo {
+public class WasmInfo {
+	public static void Load
+		( string                   wasmAssetPath
+		, System.Action<WasmInfo>  successCallback
+		, System.Action            errorCallback
+		, Object?                  context = null
+		)
+	{
+		WasmInfo? wasmInfo = null;
+		var progressId = Progress.Start(
+			$"Collecting WASM info",
+			wasmAssetPath,
+			Progress.Options.Indefinite
+		);
+
+		var proc = new Process();
+		proc.StartInfo.FileName = "wasm-info";
+		proc.StartInfo.CreateNoWindow = true;
+		proc.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+		proc.StartInfo.Arguments = wasmAssetPath;
+		proc.StartInfo.UseShellExecute = false;
+		proc.StartInfo.RedirectStandardOutput = true;
+		proc.StartInfo.RedirectStandardError = true;
+		proc.EnableRaisingEvents = true;
+
+		var jsonStr = "";
+		proc.OutputDataReceived += (_, ev) => {
+			jsonStr += ev.Data;
+		};
+
+		proc.ErrorDataReceived += (_, ev) => {
+			if(!string.IsNullOrWhiteSpace(ev.Data)) {
+				UnityEngine.Debug.LogError(ev.Data, context);
+			}
+		};
+
+		proc.Exited += (_, _) => {
+			try {
+				if(proc.ExitCode == 0) {
+					wasmInfo = JsonUtility.FromJson<WasmInfo>(jsonStr);
+					Progress.Finish(progressId, Progress.Status.Succeeded);
+					successCallback(wasmInfo);
+				} else {
+					UnityEngine.Debug.LogError(
+						$"wasm-info exited with error code {proc.ExitCode}",
+						context
+					);
+					Progress.Finish(progressId, Progress.Status.Failed);
+					errorCallback();
+				}
+			} finally {
+				Progress.Finish(progressId, Progress.Status.Failed);
+			}
+		};
+
+		proc.Start();
+		proc.BeginOutputReadLine();
+		proc.BeginErrorReadLine();
+	}
+
 	[System.Serializable]
 	public class ExternInfo {
 		public string name = "";
@@ -41,54 +100,17 @@ public class WasmAssetEditor : Editor {
 		loadingWasmInfo = true;
 		wasmInfo = null;
 
-		var progressId = Progress.Start(
-			$"Collecting WASM info",
-			assetPath,
-			Progress.Options.Indefinite
-		);
-
-		var proc = new Process();
-		proc.StartInfo.FileName = "wasm-info";
-		proc.StartInfo.CreateNoWindow = true;
-		proc.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-		proc.StartInfo.Arguments = assetPath;
-		proc.StartInfo.UseShellExecute = false;
-		proc.StartInfo.RedirectStandardOutput = true;
-		proc.StartInfo.RedirectStandardError = true;
-		proc.EnableRaisingEvents = true;
-
-		var jsonStr = "";
-		proc.OutputDataReceived += (_, ev) => {
-			jsonStr += ev.Data;
-		};
-
-		proc.ErrorDataReceived += (_, ev) => {
-			if(!string.IsNullOrWhiteSpace(ev.Data)) {
-				UnityEngine.Debug.LogError(ev.Data, target);
-			}
-		};
-
-		proc.Exited += (_, _) => {
-			try {
-				if(proc.ExitCode == 0) {
-					wasmInfo = JsonUtility.FromJson<WasmInfo>(jsonStr);
-					Progress.Finish(progressId, Progress.Status.Succeeded);
-				} else {
-					UnityEngine.Debug.LogError(
-						$"wasm-info exited with error code {proc.ExitCode}",
-						target
-					);
-					Progress.Finish(progressId, Progress.Status.Failed);
-				}
-			} finally {
+		WasmInfo.Load(
+			wasmAssetPath: assetPath,
+			successCallback: wasmInfo => {
+				this.wasmInfo = wasmInfo;
 				loadingWasmInfo = false;
-				Progress.Finish(progressId, Progress.Status.Failed);
-			}
-		};
-
-		proc.Start();
-		proc.BeginOutputReadLine();
-		proc.BeginErrorReadLine();
+			},
+			errorCallback: () => {
+				loadingWasmInfo = false;
+			},
+			context: target
+		);
 	}
 
 	private void ExternInfoGUI
